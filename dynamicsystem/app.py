@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, send_from_directory, request, jsonify
 import numpy as np
+import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='build', static_url_path='')
 
 def lin_sys(A, y0, t):
     eigenval, eigenvec = np.linalg.eig(A)
@@ -15,7 +16,7 @@ def lin_sys(A, y0, t):
 def index():
     return render_template('index.html')
 
-@app.route('/simulate', methods = ['POST'])
+@app.route('/simulate', methods=['POST'])
 def simulate():
     params = request.json
     A = np.array(params['A'], dtype = complex)
@@ -33,4 +34,8 @@ def simulate():
         trajectory = lin_sys(A, x0, t)
         trajectories.append(trajectory.tolist())
     
-    return {"time": t.tolist(), "trajectories": trajectories}
+    return jsonify({"time": t.tolist(), "trajectories": trajectories})
+
+@app.route('/<path:path>')
+def static_proxy(path):
+    return send_from_directory(app.static_folder, path)
