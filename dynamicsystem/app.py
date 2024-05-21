@@ -1,44 +1,80 @@
-from flask import Flask, render_template, send_from_directory, request, jsonify
+from flask import Flask, render_template, send_from_directory, request, jsonify, send_file, make_response
 import numpy as np
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import os
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.use('Agg')
+from io import BytesIO
+from itertools import product
 
 app = Flask(__name__, static_folder='build', static_url_path='')
 CORS(app)
 
-def lin_sys(A, y0, t):
+def lin_sys(A, c, t):
     eigenval, eigenvec = np.linalg.eig(A)
-    c = np.linalg.solve(eigenvec, y0)
-    trajectory = np.zeros((len(y0), len(t)))
+    trajectory = np.zeros((len(c), len(t)), dtype=complex)
     for i in range(len(t)):
-        trajectory[:, i] = np.dot(eigenvec, c * (eigenval ** t[i]))
-        print(trajectory[:, i])
+        trajectory[:, i] = sum(c[j] * (eigenval[j] ** t[i]) * eigenvec[:, j] for j in range(len(c)))
     return trajectory
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/simulate', methods=['POST'])
+@app.route('/simulate', methods=['POST', 'OPTIONS'])
+@cross_origin()
 def simulate():
+
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        headers = response.headers
+
+        headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+        headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        headers['Access-Control-Allow-Headers'] = 'Content-Type'
+
+        return response
+    
     params = request.json
+    time_range = params['timeRange']
     A = np.array(params['A'], dtype = complex)
-    t = np.arange(params['time'])
+    t = np.linspace(-time_range // 2, time_range // 2 + 1)
 
     dim = A.shape[0]
-    grid_size = 5
-    c_ranges = [np.linspace(-2, 2, grid_size) for _ in range(dim)]
-    c_grid = np.array(np.meshgrid(*c_ranges)).T.reshape(-1, dim)
+    sign_combinations = list(product([-5, 0, 5], repeat=dim))
     
-    trajectories = []
-    for c in c_grid:
-        eigvals, eigvecs = np.linalg.eig(A)
-        x0 = np.dot(eigvecs, c)
-        trajectory = lin_sys(A, x0, t)
-        trajectories.append(trajectory.tolist())
-    
-    response = jsonify({"time": t.tolist(), "trajectories": trajectories})
-    response.headers.add('Access-Control-Allow-Origin', '*')
+    all_trajectories_x = []
+    all_trajectories_y = []
+    fig, ax = plt.subplots()
+    cmap = plt.get_cmap('RdYlGn_r')
+    eigvals, eigvecs = np.linalg.eig(A)
+    for signs in sign_combinations:
+        c = np.array(signs, dtype=complex)
+        trajectory = lin_sys(A, c, t)
+        all_trajectories_x.extend(trajectory[0, :].real)
+        all_trajectories_y.extend(trajectory[1, :].real)
+        for i in range(len(t)):
+            color = cmap((t[i] - t.min()) / (t.max() - t.min()))
+            ax.scatter(trajectory[0, i], trajectory[1, i], color=color, s=10)
+
+    ax.set_title('Phase Portrait')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.axhline(0, color='black',linewidth=0.5)
+    ax.axvline(0, color='black',linewidth=0.5)
+    ax.grid(color = 'gray', linestyle = '--', linewidth = 0.5)
+
+    x_min, x_max = min(all_trajectories_x), max(all_trajectories_x)
+    y_min, y_max = min(all_trajectories_y), max(all_trajectories_y)
+    ax.set_xlim([x_min - 1, x_max + 1])
+    ax.set_ylim([y_min - 1, y_max + 1])
+
+    buf = BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    response = make_response(send_file(buf, mimetype='image/png'))
+    response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
     return response
 
 @app.route('/<path:path>')

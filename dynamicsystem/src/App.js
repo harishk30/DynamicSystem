@@ -2,7 +2,12 @@ import React, { useState } from 'react';
 import Plot from 'react-plotly.js';
 
 function App() {
-    const [data, setData] = useState(null);
+    const [imageUrl, setImageUrl] = useState(null);
+    const [timeRange, setTimeRange] = useState(10); // Default time range is -5 to 5
+
+    const handleSliderChange = (e) => {
+        setTimeRange(parseInt(e.target.value, 10));
+    };
 
     const handleSubmit = async (e) => {
       e.preventDefault();
@@ -12,18 +17,17 @@ function App() {
           [parseFloat(e.target.a11.value), parseFloat(e.target.a12.value)],
           [parseFloat(e.target.a21.value), parseFloat(e.target.a22.value)],
       ];
-      const time = parseInt(e.target.time.value, 10);
 
       // Sending POST request to the Flask backend
       const response = await fetch('http://127.0.0.1:5000/simulate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ A, time }),
+          body: JSON.stringify({ A, timeRange }),
       });
 
-      const result = await response.json();
-
-      setData(result);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setImageUrl(url);
   };
 
     return (
@@ -34,21 +38,22 @@ function App() {
                 <input type="text" name="a12" placeholder="A[0][1]" required />
                 <input type="text" name="a21" placeholder="A[1][0]" required />
                 <input type="text" name="a22" placeholder="A[1][1]" required />
-                <h3>Time Duration</h3>
-                <input type="text" name="time" placeholder="time" required />
+                <h3>Time Range</h3>
+                <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    value={timeRange}
+                    onChange={handleSliderChange}
+                />
+                <span>Time Range: {-timeRange / 2} to {timeRange / 2}</span>
                 <button type="submit">Simulate</button>
             </form>
-            {data && (
-                <Plot
-                    data={data.trajectories.map((trajectory, index) => ({
-                        x: trajectory[0],
-                        y: trajectory[1],
-                        type: 'scatter',
-                        mode: 'points',
-                        name: `Trajectory ${index + 1}`,
-                    }))}
-                    layout={{ title: 'Phase Portrait' }}
-                />
+            {imageUrl && (
+                <div>
+                    <h3>Phase Portrait</h3>
+                    <img src={imageUrl} alt="Phase Portrait" />
+                </div>
             )}
         </div>
     );
