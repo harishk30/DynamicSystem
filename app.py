@@ -1,6 +1,6 @@
 from flask import Flask, render_template, send_from_directory, request, jsonify, send_file, make_response
 import numpy as np
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 import os
 import matplotlib
 import matplotlib.pyplot as plt
@@ -9,7 +9,7 @@ from io import BytesIO
 from itertools import product
 
 app = Flask(__name__, static_folder='build', static_url_path='')
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "https://sleepy-reef-04227-f51012b87050.herokuapp.com"}})
 
 def lin_sys(A, c, t):
     eigenval, eigenvec = np.linalg.eig(A)
@@ -22,23 +22,11 @@ def lin_sys(A, c, t):
 def index():
     return render_template('index.html')
 
-@app.route('/simulate', methods=['POST', 'OPTIONS'])
-@cross_origin()
+@app.route('/simulate', methods=['POST'])
 def simulate():
-
-    if request.method == 'OPTIONS':
-        response = app.make_default_options_response()
-        headers = response.headers
-
-        headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
-        headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        headers['Access-Control-Allow-Headers'] = 'Content-Type'
-
-        return response
-    
     params = request.json
     time_range = params['timeRange']
-    A = np.array(params['A'], dtype = complex)
+    A = np.array(params['A'], dtype=complex)
     t = np.linspace(-time_range // 2, time_range // 2 + 1)
 
     dim = A.shape[0]
@@ -61,9 +49,9 @@ def simulate():
     ax.set_title('Phase Portrait')
     ax.set_xlabel('x')
     ax.set_ylabel('y')
-    ax.axhline(0, color='black',linewidth=0.5)
-    ax.axvline(0, color='black',linewidth=0.5)
-    ax.grid(color = 'gray', linestyle = '--', linewidth = 0.5)
+    ax.axhline(0, color='black', linewidth=0.5)
+    ax.axvline(0, color='black', linewidth=0.5)
+    ax.grid(color='gray', linestyle='--', linewidth=0.5)
 
     x_min, x_max = min(all_trajectories_x), max(all_trajectories_x)
     y_min, y_max = min(all_trajectories_y), max(all_trajectories_y)
@@ -74,7 +62,7 @@ def simulate():
     plt.savefig(buf, format='png')
     buf.seek(0)
     response = make_response(send_file(buf, mimetype='image/png'))
-    response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+    response.headers['Access-Control-Allow-Origin'] = 'https://sleepy-reef-04227-f51012b87050.herokuapp.com'
     return response
 
 @app.route('/<path:path>')

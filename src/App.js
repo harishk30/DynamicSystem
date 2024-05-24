@@ -10,25 +10,25 @@ function App() {
     };
 
     const handleSubmit = async (e) => {
-      e.preventDefault();
-      
-      // Collecting form input values
-      const A = [
-          [parseFloat(e.target.a11.value), parseFloat(e.target.a12.value)],
-          [parseFloat(e.target.a21.value), parseFloat(e.target.a22.value)],
-      ];
+        e.preventDefault();
 
-      // Sending POST request to the Flask backend
-      const response = await fetch('http://127.0.0.1:5000/simulate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ A, timeRange }),
-      });
+        // Collecting form input values
+        const A = [
+            [parseFloat(e.target.a11.value), parseFloat(e.target.a12.value)],
+            [parseFloat(e.target.a21.value), parseFloat(e.target.a22.value)],
+        ];
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      setImageUrl(url);
-  };
+        // Sending POST request to the Flask backend
+        const response = await fetch(`https://newdynamicsystem-b87039aabd02.herokuapp.com/simulate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ A, timeRange }),
+        });
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setImageUrl(url);
+    };
 
     return (
         <div>
