@@ -1,14 +1,13 @@
-from flask import Flask, render_template, send_from_directory, request, jsonify, send_file, make_response
+from flask import Flask, request, jsonify, send_file, make_response
 import numpy as np
 from flask_cors import CORS
-import os
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 from io import BytesIO
 from itertools import product
 
-app = Flask(__name__, static_folder='build', static_url_path='')
+app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "https://sleepy-reef-04227-f51012b87050.herokuapp.com"}})
 
 def lin_sys(A, c, t):
@@ -17,10 +16,6 @@ def lin_sys(A, c, t):
     for i in range(len(t)):
         trajectory[:, i] = sum(c[j] * (eigenval[j] ** t[i]) * eigenvec[:, j] for j in range(len(c)))
     return trajectory
-
-@app.route('/')
-def index():
-    return render_template('index.html')
 
 @app.route('/simulate', methods=['POST'])
 def simulate():
@@ -64,10 +59,6 @@ def simulate():
     response = make_response(send_file(buf, mimetype='image/png'))
     response.headers['Access-Control-Allow-Origin'] = 'https://sleepy-reef-04227-f51012b87050.herokuapp.com'
     return response
-
-@app.route('/<path:path>')
-def static_proxy(path):
-    return send_from_directory(app.static_folder, path)
 
 if __name__ == '__main__':
     app.run(debug=True)
