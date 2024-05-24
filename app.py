@@ -7,7 +7,7 @@ matplotlib.use('Agg')
 from io import BytesIO
 from itertools import product
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='build', static_url_path='')
 CORS(app, resources={r"/*": {"origins": "https://sleepy-reef-04227-f51012b87050.herokuapp.com"}})
 
 def lin_sys(A, c, t):
