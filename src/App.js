@@ -25,6 +25,10 @@ function App() {
             body: JSON.stringify({ A, timeRange }),
         });
 
+        if (!response.ok) {
+            throw new Error('Failed to fetch image');
+        }
+
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         setImageUrl(url);
